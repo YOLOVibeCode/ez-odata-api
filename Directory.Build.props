@@ -14,9 +14,11 @@
     <EzPlatformTfm>net10.0</EzPlatformTfm>
     <!-- NuGet metadata for the embeddable packages (spec 15 §2) -->
     <Version>1.0.0</Version>
-    <Authors>ez-odata-api</Authors>
+    <Authors>YOLOVibeCode</Authors>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <RepositoryUrl>https://github.com/your-org/ez-odata-api</RepositoryUrl>
+    <RepositoryUrl>https://github.com/YOLOVibeCode/ez-odata-api</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/YOLOVibeCode/ez-odata-api</PackageProjectUrl>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
