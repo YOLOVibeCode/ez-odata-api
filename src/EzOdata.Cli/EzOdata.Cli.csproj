@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(EzPlatformTfm)</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>ez-admin</AssemblyName>
+    <Description>Operational CLI: migrate, create-admin, rotate-master-key, validate-config (spec 12 §7).</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EzOdata.Core\EzOdata.Core.csproj" />
+    <ProjectReference Include="..\EzOdata.Data\EzOdata.Data.csproj" />
+  </ItemGroup>
+
+</Project>

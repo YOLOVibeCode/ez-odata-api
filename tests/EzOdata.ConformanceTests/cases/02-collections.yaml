@@ -1,0 +1,92 @@
+# Collection reads: paging, projection, ordering, count (spec 05 §4)
+
+- name: collection-default-page
+  request: "GET /customers"
+  expect:
+    status: 200
+    headers:
+      OData-Version: "4.0"
+    jsonpath:
+      "$.value.length()": 8
+      "$['@odata.context']": exists
+
+- name: top-limits-results
+  request: "GET /customers?$top=3"
+  expect:
+    status: 200
+    jsonpath:
+      "$.value.length()": 3
+
+- name: top-beyond-rows-returns-all-without-nextlink
+  request: "GET /customers?$top=500"
+  expect:
+    status: 200
+    jsonpath:
+      "$.value.length()": 8
+      "$['@odata.nextLink']": absent
+
+- name: nextlink-present-when-more-rows
+  request: "GET /customers?$top=5"
+  expect:
+    status: 200
+    jsonpath:
+      "$.value.length()": 5
+      "$['@odata.nextLink']": exists
+
+- name: skip-offsets-results
+  request: "GET /customers?$orderby=id&$skip=6"
+  expect:
+    status: 200
+    jsonpath:
+      "$.value.length()": 2
+      "$.value[0].id": 7
+
+- name: select-projects-fields
+  request: "GET /customers?$select=id,name&$top=1"
+  expect:
+    status: 200
+    jsonpath:
+      "$.value[0].id": 1
+      "$.value[0].name": "Acme Corp"
+      "$.value[0].email": absent
+
+- name: orderby-descending
+  request: "GET /customers?$orderby=id desc&$top=1"
+  expect:
+    status: 200
+    jsonpath:
+      "$.value[0].id": 8
+
+- name: orderby-string-with-tiebreaker
+  request: "GET /customers?$orderby=country&$top=8&$select=id,country"
+  expect:
+    status: 200
+    jsonpath:
+      "$.value.length()": 8
+
+- name: count-inline
+  request: "GET /customers?$count=true&$top=2"
+  expect:
+    status: 200
+    jsonpath:
+      "$['@odata.count']": 8
+      "$.value.length()": 2
+
+- name: count-path-segment
+  request: "GET /customers/$count"
+  expect:
+    status: 200
+    bodyContains: ["8"]
+
+- name: count-path-with-filter
+  request: "GET /orders/$count?$filter=status eq 'open'"
+  expect:
+    status: 200
+    bodyContains: ["5"]
+
+- name: keyless-view-is-queryable
+  request: "GET /v_customer_order_totals?$top=3"
+  expect:
+    status: 200
+    jsonpath:
+      "$.value.length()": 3

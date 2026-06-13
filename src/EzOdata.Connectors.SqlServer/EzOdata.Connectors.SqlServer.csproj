@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(EzEngineTfm)</TargetFramework>
+    <Description>SQL Server connector (Microsoft.Data.SqlClient, netstandard2.0-compatible).</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EzOdata.Connectors.Abstractions\EzOdata.Connectors.Abstractions.csproj" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
+  </ItemGroup>
+
+</Project>

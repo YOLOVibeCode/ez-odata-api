@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(EzEngineTfm)</TargetFramework>
+    <Description>SQLite connector (Microsoft.Data.Sqlite 8.x: netstandard2.0-compatible line).</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EzOdata.Connectors.Abstractions\EzOdata.Connectors.Abstractions.csproj" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.10" />
+  </ItemGroup>
+
+</Project>

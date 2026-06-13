@@ -1,0 +1,80 @@
+# $expand (spec 05 §4.4) and $apply (spec 05 §4.5)
+
+- name: expand-to-one
+  request: "GET /orders(1)?$expand=customer&$select=id,status"
+  expect:
+    status: 200
+    jsonpath:
+      "$.id": 1
+      "$.customer.name": "Acme Corp"
+
+- name: expand-to-many
+  request: "GET /customers(1)?$expand=orders"
+  expect:
+    status: 200
+    jsonpath:
+      "$.name": "Acme Corp"
+      "$.orders.length()": 2
+
+- name: expand-to-many-with-nested-filter
+  request: "GET /customers(1)?$expand=orders($filter=status eq 'open')"
+  expect:
+    status: 200
+    jsonpath:
+      "$.orders.length()": 1
+
+- name: expand-to-many-with-nested-top
+  request: "GET /customers?$expand=orders($top=1;$orderby=total desc)&$top=3&$orderby=id"
+  expect:
+    status: 200
+    jsonpath:
+      "$.value[0].orders.length()": 1
+
+- name: expand-collection-on-collection
+  request: "GET /customers?$expand=orders&$top=2&$orderby=id"
+  expect:
+    status: 200
+    jsonpath:
+      "$.value.length()": 2
+      "$.value[0].orders.length()": 2
+
+- name: expand-nested-two-levels
+  request: "GET /customers(1)?$expand=orders($expand=order_items)"
+  expect:
+    status: 200
+    bodyContains:
+      - '"orders"'
+      - '"order_items"'
+
+- name: expand-too-deep-400
+  request: "GET /customers?$expand=orders($expand=order_items($expand=product($expand=customer)))"
+  expect:
+    status: 400
+
+- name: apply-groupby-aggregate
+  request: "GET /orders?$apply=groupby((status), aggregate(total with sum as revenue))"
+  expect:
+    status: 200
+    jsonpath:
+      "$.value.length()": ">= 2"
+
+- name: apply-bare-aggregate
+  request: "GET /orders?$apply=aggregate(total with sum as revenue, $count as n)"
+  expect:
+    status: 200
+    jsonpath:
+      "$.value.length()": 1
+
+- name: apply-filter-then-groupby
+  request: "GET /orders?$apply=filter(status eq 'open')/groupby((customer_id), aggregate(total with sum as revenue))"
+  expect:
+    status: 200
+    jsonpath:
+      "$.value.length()": ">= 1"
+
+- name: apply-countdistinct
+  request: "GET /orders?$apply=aggregate(status with countdistinct as kinds)"
+  expect:
+    status: 200
+    jsonpath:
+      "$.value[0].kinds": 3

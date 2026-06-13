@@ -1,0 +1,26 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/EzOdata.Admin/EzOdata.Admin.csproj" />
+    <Project Path="src/EzOdata.AspNetCore/EzOdata.AspNetCore.csproj" />
+    <Project Path="src/EzOdata.Cli/EzOdata.Cli.csproj" />
+    <Project Path="src/EzOdata.Connectors.Abstractions/EzOdata.Connectors.Abstractions.csproj" />
+    <Project Path="src/EzOdata.Connectors.MySql/EzOdata.Connectors.MySql.csproj" />
+    <Project Path="src/EzOdata.Connectors.PostgreSql/EzOdata.Connectors.PostgreSql.csproj" />
+    <Project Path="src/EzOdata.Connectors.Sqlite/EzOdata.Connectors.Sqlite.csproj" />
+    <Project Path="src/EzOdata.Connectors.SqlServer/EzOdata.Connectors.SqlServer.csproj" />
+    <Project Path="src/EzOdata.Core/EzOdata.Core.csproj" />
+    <Project Path="src/EzOdata.Data/EzOdata.Data.csproj" />
+    <Project Path="src/EzOdata.Docs/EzOdata.Docs.csproj" />
+    <Project Path="src/EzOdata.Embedded/EzOdata.Embedded.csproj" />
+    <Project Path="src/EzOdata.Host/EzOdata.Host.csproj" />
+    <Project Path="src/EzOdata.Mcp/EzOdata.Mcp.csproj" />
+    <Project Path="src/EzOdata.OData/EzOdata.OData.csproj" />
+    <Project Path="src/EzOdata.Rest/EzOdata.Rest.csproj" />
+    <Project Path="src/EzOdata.WebApi/EzOdata.WebApi.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/EzOdata.ConformanceTests/EzOdata.ConformanceTests.csproj" />
+    <Project Path="tests/EzOdata.IntegrationTests/EzOdata.IntegrationTests.csproj" />
+    <Project Path="tests/EzOdata.UnitTests/EzOdata.UnitTests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(EzPlatformTfm)</TargetFramework>
+    <!-- Phase 9 widens this to net8.0;net10.0 for the published package (spec 15 EMB-8) -->
+    <Description>ASP.NET Core host adapter: maps HTTP ↔ the host-agnostic engine contract (spec 02 §5.2).</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="..\EzOdata.Core\EzOdata.Core.csproj" />
+    <ProjectReference Include="..\EzOdata.OData\EzOdata.OData.csproj" />
+    <ProjectReference Include="..\EzOdata.Rest\EzOdata.Rest.csproj" />
+    <ProjectReference Include="..\EzOdata.Connectors.Abstractions\EzOdata.Connectors.Abstractions.csproj" />
+    <ProjectReference Include="..\EzOdata.Embedded\EzOdata.Embedded.csproj" />
+    <ProjectReference Include="..\EzOdata.Connectors.PostgreSql\EzOdata.Connectors.PostgreSql.csproj" />
+    <ProjectReference Include="..\EzOdata.Connectors.MySql\EzOdata.Connectors.MySql.csproj" />
+    <ProjectReference Include="..\EzOdata.Connectors.SqlServer\EzOdata.Connectors.SqlServer.csproj" />
+    <ProjectReference Include="..\EzOdata.Connectors.Sqlite\EzOdata.Connectors.Sqlite.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,63 @@
+# By-key reads + error behavior (spec 05 §2, OD-7, OD-9)
+
+- name: by-key-parenthesis-syntax
+  request: "GET /customers(1)"
+  expect:
+    status: 200
+    jsonpath:
+      "$.id": 1
+      "$.name": "Acme Corp"
+
+- name: by-key-not-found
+  request: "GET /customers(99999)"
+  expect:
+    status: 404
+
+- name: by-key-composite
+  request: "GET /order_items(order_id=1,line_no=2)"
+  expect:
+    status: 200
+    jsonpath:
+      "$.qty": 1
+
+- name: by-key-with-select
+  request: "GET /customers(2)?$select=name"
+  expect:
+    status: 200
+    jsonpath:
+      "$.name": "Globex"
+      "$.email": absent
+
+- name: unknown-entity-set-404
+  request: "GET /unicorns"
+  expect:
+    status: 404
+
+- name: unknown-filter-property-400
+  request: "GET /customers?$filter=nonexistent eq 1"
+  expect:
+    status: 400
+    bodyContains: ["error"]
+
+- name: malformed-filter-400
+  request: "GET /customers?$filter=name eq"
+  expect:
+    status: 400
+
+- name: unknown-select-property-400
+  request: "GET /customers?$select=ghost_field"
+  expect:
+    status: 400
+
+- name: invalid-skiptoken-400
+  request: "GET /customers?$skiptoken=tampered-token"
+  expect:
+    status: 400
+
+- name: error-payload-is-odata-format
+  request: "GET /customers?$filter=bogus eq 1"
+  expect:
+    status: 400
+    jsonpath:
+      "$.error.code": exists
+      "$.error.message": exists

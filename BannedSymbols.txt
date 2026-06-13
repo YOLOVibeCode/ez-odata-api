@@ -1,0 +1,3 @@
+P:System.DateTime.Now;Use DateTimeOffset.UtcNow (or an injected ITimeProvider) — wall-clock local time is banned (spec 13 §8)
+P:System.DateTime.Today;Use DateTimeOffset.UtcNow — wall-clock local time is banned (spec 13 §8)
+M:System.String.Format(System.String,System.Object);Never build SQL or messages destined for SQL via string.Format — use parameters (spec NFR-3)

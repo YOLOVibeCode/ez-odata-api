@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(EzEngineTfm)</TargetFramework>
+    <Description>REST/JSON dialect engine over the shared Query IR (spec 06).</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EzOdata.Core\EzOdata.Core.csproj" />
+    <ProjectReference Include="..\EzOdata.Connectors.Abstractions\EzOdata.Connectors.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,45 @@
+# Service document + $metadata (spec 05 OD-1)
+
+- name: service-document-lists-entity-sets
+  request: "GET /"
+  expect:
+    status: 200
+    bodyContains:
+      - '"customers"'
+      - '"orders"'
+      - '"v_customer_order_totals"'
+
+- name: metadata-returns-csdl-xml
+  request: "GET /$metadata"
+  expect:
+    status: 200
+    headers:
+      OData-Version: "4.0"
+    bodyContains:
+      - 'EntityType Name="customers"'
+      - 'Property Name="email"'
+      - 'NavigationProperty'
+      - 'EntityContainer'
+
+- name: metadata-has-keys-and-types
+  request: "GET /$metadata"
+  expect:
+    status: 200
+    bodyContains:
+      - '<Key>'
+      - 'Edm.Int32'
+      - 'Edm.DateTimeOffset'
+      - 'Edm.Decimal'
+
+- name: metadata-navigation-pair
+  request: "GET /$metadata"
+  expect:
+    status: 200
+    bodyContains:
+      - 'NavigationProperty Name="customer"'
+      - 'NavigationProperty Name="orders"'
+
+- name: unknown-service-404
+  request: "GET /api/odata/ghost-service/customers"
+  expect:
+    status: 404

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <Description>Classic ASP.NET (.NET Framework 4.8) host adapter (spec 02 §1.1, 15 EMB-9): an HttpMessageHandler exposing the ez-odata engine inside Web API 2 / OWIN sites.</Description>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Reference assemblies let net48 build on any OS (CI/macOS/Linux). -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <PackageReference Include="PolySharp" Version="1.15.0" PrivateAssets="all" />
+    <ProjectReference Include="..\EzOdata.Core\EzOdata.Core.csproj" />
+    <ProjectReference Include="..\EzOdata.Connectors.Abstractions\EzOdata.Connectors.Abstractions.csproj" />
+    <ProjectReference Include="..\EzOdata.OData\EzOdata.OData.csproj" />
+    <ProjectReference Include="..\EzOdata.Rest\EzOdata.Rest.csproj" />
+    <ProjectReference Include="..\EzOdata.Embedded\EzOdata.Embedded.csproj" />
+    <Reference Include="System.Net.Http" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(EzEngineTfm)</TargetFramework>
+    <Description>PostgreSQL connector. Npgsql pinned to the 8.x line: the last release line supporting .NET Framework via netstandard2.0 (spec 02 §1.1).</Description>
+    <NoWarn>$(NoWarn);NU1902;NU1903</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EzOdata.Connectors.Abstractions\EzOdata.Connectors.Abstractions.csproj" />
+    <PackageReference Include="Npgsql" Version="8.0.7" />
+  </ItemGroup>
+
+</Project>

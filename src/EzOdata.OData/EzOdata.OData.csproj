@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(EzEngineTfm)</TargetFramework>
+    <Description>OData v4 engine: dynamic EDM factory, ODataUriParser AST → Query IR, ODL-direct serialization. ODataLib pinned to 7.x: the netstandard2.0/.NET Framework line (spec 02 §1.1, §5).</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EzOdata.Core\EzOdata.Core.csproj" />
+    <ProjectReference Include="..\EzOdata.Connectors.Abstractions\EzOdata.Connectors.Abstractions.csproj" />
+    <ProjectReference Include="..\EzOdata.Docs\EzOdata.Docs.csproj" />
+    <PackageReference Include="Microsoft.OData.Core" Version="7.21.3" />
+    <PackageReference Include="Microsoft.OData.Edm" Version="7.21.3" />
+  </ItemGroup>
+
+</Project>

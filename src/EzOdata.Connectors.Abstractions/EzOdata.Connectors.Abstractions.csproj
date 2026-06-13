@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(EzEngineTfm)</TargetFramework>
+    <Description>Segregated connector capability contracts: IConnectionTester, ISchemaIntrospector, IQueryExecutor, IWriteExecutor, ISqlDialect.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EzOdata.Core\EzOdata.Core.csproj" />
+  </ItemGroup>
+
+</Project>

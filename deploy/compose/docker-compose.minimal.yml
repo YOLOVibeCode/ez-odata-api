@@ -1,0 +1,18 @@
+# Minimal profile (spec 12 OPS-2): single container, SQLite system DB, no Redis.
+services:
+  ez-odata-api:
+    build:
+      context: ../..
+      dockerfile: deploy/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      SystemDatabase__Provider: sqlite
+      SystemDatabase__ConnectionString: "Data Source=/data/ezodata.db"
+      Auth__Jwt__SigningKey: "minimal-dev-signing-key-change-me-32chars"
+      Encryption__MasterKey: "bWluaW1hbC1kZXYtbWFzdGVyLWtleS0zMmJ5dGVzIQ=="
+    volumes:
+      - ez-data:/data
+
+volumes:
+  ez-data:

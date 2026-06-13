@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(EzPlatformTfm)</TargetFramework>
+    <Description>MCP server: per-identity tool catalog over the shared Query IR (spec 09). Modern .NET only — the MCP SDK does not support .NET Framework.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EzOdata.Core\EzOdata.Core.csproj" />
+    <ProjectReference Include="..\EzOdata.Connectors.Abstractions\EzOdata.Connectors.Abstractions.csproj" />
+    <ProjectReference Include="..\EzOdata.Rest\EzOdata.Rest.csproj" />
+  </ItemGroup>
+
+</Project>

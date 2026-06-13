@@ -1,0 +1,51 @@
+# ez-odata-api Helm values (spec 12 OPS-4). Stateless deployment; external system DB.
+replicaCount: 2
+
+image:
+  repository: ghcr.io/your-org/ez-odata-api
+  tag: ""          # defaults to .Chart.AppVersion
+  pullPolicy: IfNotPresent
+
+systemDatabase:
+  provider: postgres
+  # Reference an existing secret with key `connection-string`.
+  existingSecret: ez-odata-system-db
+  secretKey: connection-string
+
+# Existing secret holding `jwt-signing-key` and `master-key` (base64, 32 bytes).
+auth:
+  existingSecret: ez-odata-secrets
+
+redis:
+  enabled: true
+  connectionString: "ez-redis:6379"
+
+mcp:
+  enabled: true
+  allowWrites: false
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: "2"
+    memory: 1Gi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+ingress:
+  enabled: false
+  className: ""
+  host: ez-odata.example.com
+
+service:
+  port: 8080
+
+# Prometheus ServiceMonitor (optional; requires the Prometheus operator).
+serviceMonitor:
+  enabled: false

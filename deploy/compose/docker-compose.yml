@@ -1,0 +1,51 @@
+# Full dev/demo profile (spec 12 OPS-2): platform + PostgreSQL system DB + Redis +
+# a seeded sample database. Bring up with: docker compose up -d
+services:
+  ez-odata-api:
+    build:
+      context: ../..
+      dockerfile: deploy/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      SystemDatabase__Provider: postgres
+      SystemDatabase__ConnectionString: "Host=systemdb;Database=ezodata;Username=ez;Password=ez-system-pw"
+      Auth__Jwt__SigningKey: "compose-dev-signing-key-change-me-please-32"
+      Encryption__MasterKey: "Y29tcG9zZS1kZXYtbWFzdGVyLWtleS0zMmJ5dGVzIQ=="
+      Redis__ConnectionString: "redis:6379"
+      Mcp__Enabled: "true"
+    depends_on:
+      systemdb:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  systemdb:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ezodata
+      POSTGRES_USER: ez
+      POSTGRES_PASSWORD: ez-system-pw
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ez"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - systemdb-data:/var/lib/postgresql/data
+
+  # Sample target database to connect as a service (demo).
+  sampledb:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: northwind
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD: demo-pw
+    ports:
+      - "55432:5432"
+
+  redis:
+    image: redis:7-alpine
+
+volumes:
+  systemdb-data:

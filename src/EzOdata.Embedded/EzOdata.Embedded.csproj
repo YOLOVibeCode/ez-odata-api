@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(EzEngineTfm)</TargetFramework>
+    <Description>Host-agnostic embedded configuration: fluent service/role builders and in-memory stores (spec 15). Shared by the ASP.NET Core (net8+) and classic Web API (net48) adapters.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EzOdata.Core\EzOdata.Core.csproj" />
+    <ProjectReference Include="..\EzOdata.Connectors.Abstractions\EzOdata.Connectors.Abstractions.csproj" />
+    <ProjectReference Include="..\EzOdata.Connectors.PostgreSql\EzOdata.Connectors.PostgreSql.csproj" />
+    <ProjectReference Include="..\EzOdata.Connectors.MySql\EzOdata.Connectors.MySql.csproj" />
+    <ProjectReference Include="..\EzOdata.Connectors.SqlServer\EzOdata.Connectors.SqlServer.csproj" />
+    <ProjectReference Include="..\EzOdata.Connectors.Sqlite\EzOdata.Connectors.Sqlite.csproj" />
+    <ProjectReference Include="..\EzOdata.OData\EzOdata.OData.csproj" />
+    <ProjectReference Include="..\EzOdata.Rest\EzOdata.Rest.csproj" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
+  </ItemGroup>
+
+</Project>

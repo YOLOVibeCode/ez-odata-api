@@ -1,0 +1,128 @@
+# $filter grammar (spec 05 §4.3) over the PostgreSQL dialect (spec 04 §7.2)
+
+- name: filter-eq-string
+  request: "GET /orders?$filter=status eq 'open'&$count=true"
+  expect:
+    status: 200
+    jsonpath:
+      "$['@odata.count']": 5
+
+- name: filter-ne
+  request: "GET /orders?$filter=status ne 'open'&$count=true"
+  expect:
+    status: 200
+    jsonpath:
+      "$['@odata.count']": 5
+
+- name: filter-gt-decimal
+  request: "GET /orders?$filter=total gt 250.0&$count=true"
+  expect:
+    status: 200
+    jsonpath:
+      "$['@odata.count']": 3
+
+- name: filter-and-or-grouping
+  request: "GET /orders?$filter=(status eq 'open' or status eq 'shipped') and total lt 100&$count=true"
+  expect:
+    status: 200
+    jsonpath:
+      "$['@odata.count']": 4
+
+- name: filter-not
+  request: "GET /orders?$filter=not (status eq 'cancelled')&$count=true"
+  expect:
+    status: 200
+    jsonpath:
+      "$['@odata.count']": 9
+
+- name: filter-null-literal
+  request: "GET /customers?$filter=ssn eq null&$count=true"
+  expect:
+    status: 200
+    jsonpath:
+      "$['@odata.count']": 3
+
+- name: filter-not-null
+  request: "GET /customers?$filter=ssn ne null&$count=true"
+  expect:
+    status: 200
+    jsonpath:
+      "$['@odata.count']": 5
+
+- name: filter-contains-case-insensitive
+  request: "GET /customers?$filter=contains(name,'corp')&$count=true"
+  expect:
+    status: 200
+    jsonpath:
+      "$['@odata.count']": 2
+
+- name: filter-startswith
+  request: "GET /customers?$filter=startswith(name,'Way')&$select=name"
+  expect:
+    status: 200
+    jsonpath:
+      "$.value[0].name": "Wayne Enterprises"
+
+- name: filter-endswith
+  request: "GET /customers?$filter=endswith(email,'.example')&$count=true"
+  expect:
+    status: 200
+    jsonpath:
+      "$['@odata.count']": 8
+
+- name: filter-length-comparison
+  request: "GET /customers?$filter=length(country) eq 2&$count=true"
+  expect:
+    status: 200
+    jsonpath:
+      "$['@odata.count']": 8
+
+- name: filter-year-function
+  request: "GET /orders?$filter=year(created_at) eq 2026&$count=true"
+  expect:
+    status: 200
+    jsonpath:
+      "$['@odata.count']": 10
+
+- name: filter-in-list
+  request: "GET /customers?$filter=country in ('DE','JP')&$count=true"
+  expect:
+    status: 200
+    jsonpath:
+      "$['@odata.count']": 2
+
+- name: filter-navigation-to-one-path
+  request: "GET /orders?$filter=customer/country eq 'US'&$count=true"
+  expect:
+    status: 200
+    jsonpath:
+      "$['@odata.count']": 6
+
+- name: filter-any-lambda
+  request: "GET /customers?$filter=orders/any(o: o/total gt 500)&$select=name"
+  expect:
+    status: 200
+    jsonpath:
+      "$.value.length()": 1
+      "$.value[0].name": "Umbrella"
+
+- name: filter-any-without-predicate
+  request: "GET /customers?$filter=orders/any()&$count=true"
+  expect:
+    status: 200
+    jsonpath:
+      "$['@odata.count']": 7
+
+- name: filter-combined-with-orderby-top
+  request: "GET /orders?$filter=status eq 'open'&$orderby=total desc&$top=1&$select=id,total"
+  expect:
+    status: 200
+    jsonpath:
+      "$.value[0].id": 6
+
+- name: sqli-attempt-is-safe-literal
+  request: "GET /customers?$filter=name eq 'x'' OR 1=1 --'&$count=true"
+  expect:
+    status: 200
+    jsonpath:
+      "$['@odata.count']": 0

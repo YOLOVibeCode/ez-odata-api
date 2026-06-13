@@ -1,0 +1,16 @@
+bin/
+obj/
+*.user
+.vs/
+.idea/
+TestResults/
+artifacts/
+*.db
+*.db-shm
+*.db-wal
+node_modules/
+ui/dist/
+ui/test-results/
+ui/playwright-report/
+src/EzOdata.Host/wwwroot/
+.DS_Store
