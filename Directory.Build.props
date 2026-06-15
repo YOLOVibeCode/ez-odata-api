@@ -14,7 +14,9 @@
     <EzPlatformTfm>net10.0</EzPlatformTfm>
     <!-- NuGet metadata for the embeddable packages (spec 15 §2) -->
     <Version>1.0.0</Version>
-    <Authors>YOLOVibeCode</Authors>
+    <Authors>Noctusoft, Inc.</Authors>
+    <Company>Noctusoft, Inc.</Company>
+    <Copyright>Copyright © 2026 Noctusoft, Inc.</Copyright>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/YOLOVibeCode/ez-odata-api</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
