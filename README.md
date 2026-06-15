@@ -1,5 +1,8 @@
 # ez-odata-api
 
+[![CI](https://github.com/YOLOVibeCode/ez-odata-api/actions/workflows/ci.yml/badge.svg)](https://github.com/YOLOVibeCode/ez-odata-api/actions/workflows/ci.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+
 A self-hosted, governed data-access platform: connect a SQL database, and it introspects
 the schema and instantly serves a fully documented **OData v4** API, a **REST/JSON** API,
 and a built-in **MCP server** for AI clients — all behind one RBAC + audit pipeline.
