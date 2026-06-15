@@ -30,6 +30,12 @@ public sealed class PolicyEngine
         IReadOnlyCollection<string> tableColumns,
         RowFilterParser rowFilterParser)
     {
+        // Dev-bypass identity short-circuits before any role evaluation.
+        if (identity.Bypass)
+        {
+            return PolicyDecision.FullAccess;
+        }
+
         if (roleRules.Any(r => r.BypassDataRules))
         {
             return PolicyDecision.FullAccess;

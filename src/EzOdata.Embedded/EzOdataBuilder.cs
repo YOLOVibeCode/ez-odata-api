@@ -16,7 +16,6 @@ public sealed class EzOdataBuilder
 {
     public List<EmbeddedServiceDefinition> Services { get; } = [];
     public List<RoleRuleSet> Roles { get; } = [];
-    public Func<System.Security.Claims.ClaimsPrincipal, IReadOnlyList<string>>? RoleResolver { get; private set; }
     public List<ConnectorDescriptor> Connectors { get; } =
     [
         PostgreSqlConnector.Create(),
@@ -24,6 +23,16 @@ public sealed class EzOdataBuilder
         SqlServerConnector.Create(),
         SqliteConnector.Create(),
     ];
+
+    // Role-resolution strategy — exactly one of these will be set.
+    public Func<System.Security.Claims.ClaimsPrincipal, IReadOnlyList<string>>? RoleResolver { get; private set; }
+
+    // Claim-based role mapping (UseHostRoles / MapRolesFromClaim)
+    public string? RoleClaimType { get; private set; }
+    public Func<string, string?>? RoleClaimTransform { get; private set; }
+
+    // Dev no-auth
+    public bool DevNoAuth { get; private set; }
 
     public EzOdataBuilder AddService(string name, Action<EmbeddedServiceBuilder> configure)
     {
@@ -43,12 +52,50 @@ public sealed class EzOdataBuilder
     }
 
     /// <summary>
-    /// The single bridge from the host's ClaimsPrincipal to ez role names (spec 15 §3.1).
-    /// If omitted, every request is denied (fail closed).
+    /// The escape-hatch bridge: fully custom ClaimsPrincipal → ez role names.
+    /// Use <see cref="UseHostRoles"/> or <see cref="MapRolesFromClaim"/> for the common cases.
     /// </summary>
     public EzOdataBuilder ResolveRolesBy(Func<System.Security.Claims.ClaimsPrincipal, IReadOnlyList<string>> resolver)
     {
         RoleResolver = resolver;
+        RoleClaimType = null;
+        return this;
+    }
+
+    /// <summary>
+    /// Map the host's standard role claims (<see cref="System.Security.Claims.ClaimTypes.Role"/>)
+    /// directly to ez role names. The role names must match roles declared via <see cref="AddRole"/>.
+    /// Also flows <c>sub</c>/<c>email</c> and all claims so @identity.* row filters resolve.
+    /// </summary>
+    public EzOdataBuilder UseHostRoles()
+    {
+        RoleClaimType = System.Security.Claims.ClaimTypes.Role;
+        RoleClaimTransform = null;
+        RoleResolver = null;
+        return this;
+    }
+
+    /// <summary>
+    /// Map a custom claim to ez role names, with an optional transform function
+    /// (e.g. prefix stripping or lowercasing). Also flows sub/email and all claims.
+    /// </summary>
+    public EzOdataBuilder MapRolesFromClaim(string claimType, Func<string, string?>? transform = null)
+    {
+        RoleClaimType = claimType;
+        RoleClaimTransform = transform;
+        RoleResolver = null;
+        return this;
+    }
+
+    /// <summary>
+    /// Allow anonymous (unauthenticated) requests to pass through as a full-access bypass
+    /// identity — ONLY when <c>ASPNETCORE_ENVIRONMENT=Development</c>.
+    /// The app will refuse to start with this flag set in any other environment.
+    /// Never use in production.
+    /// </summary>
+    public EzOdataBuilder AllowAnonymousInDevelopment()
+    {
+        DevNoAuth = true;
         return this;
     }
 }

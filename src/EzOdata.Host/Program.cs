@@ -136,8 +136,18 @@ builder.Services.AddSingleton<EzOdata.Mcp.McpServer>(sp =>
         });
 });
 
+// ---- Dev no-auth (Auth:DevNoAuth): bypass identity for all requests ----
+// Hard guard: if the flag is set outside Development, refuse to start immediately.
+var devNoAuth = builder.Configuration.GetValue<bool>("Auth:DevNoAuth");
+if (devNoAuth && !builder.Environment.IsDevelopment())
+{
+    throw new InvalidOperationException(
+        $"Auth:DevNoAuth is enabled but ASPNETCORE_ENVIRONMENT is '{builder.Environment.EnvironmentName}'. " +
+        "This option is only permitted in the Development environment and must never be used in production.");
+}
+
 // ---- AuthN/AuthZ ----
-builder.Services
+var authBuilder = builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -149,17 +159,28 @@ builder.Services
     .AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>(
         ApiKeyAuthenticationOptions.Scheme, _ => { });
 
+if (devNoAuth)
+{
+    authBuilder.AddScheme<DevBypassAuthenticationOptions, DevBypassAuthenticationHandler>(
+        DevBypassAuthenticationOptions.Scheme, _ => { });
+}
+
 builder.Services.AddMemoryCache();
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy(AdminPolicy.Name, AdminPolicy.Build());
-    // Data plane accepts JWT users and API keys (spec 08 §2)
+
+    var dataSchemes = devNoAuth
+        ? new[] { JwtBearerDefaults.AuthenticationScheme, ApiKeyAuthenticationOptions.Scheme, DevBypassAuthenticationOptions.Scheme }
+        : new[] { JwtBearerDefaults.AuthenticationScheme, ApiKeyAuthenticationOptions.Scheme };
+
+    // Data plane accepts JWT users, API keys, and (dev-only) the bypass scheme.
     options.AddPolicy("DataAccess", policy => policy
-        .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme, ApiKeyAuthenticationOptions.Scheme)
+        .AddAuthenticationSchemes(dataSchemes)
         .RequireAuthenticatedUser());
-    // MCP authenticates with both schemes; the endpoint enforces the API-key requirement (spec 09 MCP-1)
+    // MCP authenticates with the same schemes; endpoint enforces API-key requirement (spec 09 MCP-1).
     options.AddPolicy("McpAccess", policy => policy
-        .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme, ApiKeyAuthenticationOptions.Scheme)
+        .AddAuthenticationSchemes(dataSchemes)
         .RequireAuthenticatedUser());
 });
 
@@ -185,6 +206,18 @@ builder.Services.AddOpenTelemetry()
     });
 
 var app = builder.Build();
+
+// Dev no-auth warning banner (logged after Build so the real logger is available).
+if (devNoAuth)
+{
+    var devLog = app.Services.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Program>>();
+    devLog.LogWarning(
+        "======================================================================\n" +
+        "  EzOData dev no-auth is ACTIVE (Auth:DevNoAuth=true).\n" +
+        "  All data-plane requests have full bypass access.\n" +
+        "  This MUST NEVER be enabled in production.\n" +
+        "======================================================================");
+}
 
 // ---- Migrate + master-key probe (spec 02 §11, 08 §9) ----
 await using (var scope = app.Services.CreateAsyncScope())

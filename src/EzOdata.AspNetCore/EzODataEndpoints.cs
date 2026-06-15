@@ -47,7 +47,8 @@ public static class EzODataEndpoints
         // openapi.json served by the OData handler's docs generator (REST dialect)
         endpoints.Map(trimmed + "/{service}/openapi.json", async context =>
         {
-            if (context.User.Identity?.IsAuthenticated != true) { await WriteUnauthorizedAsync(context); return; }
+            var identity = ResolveIdentity(context);
+            if (identity == RequestIdentity.Anonymous) { await WriteUnauthorizedAsync(context); return; }
             var handler = context.RequestServices.GetRequiredService<OData.ODataRequestHandler>();
             var service = (string)context.Request.RouteValues["service"]!;
             var response = await handler.HandleOpenApiAsync(
@@ -59,7 +60,8 @@ public static class EzODataEndpoints
 
     private static async Task HandleRestAsync(HttpContext context)
     {
-        if (context.User.Identity?.IsAuthenticated != true)
+        var identity = ResolveIdentity(context);
+        if (identity == RequestIdentity.Anonymous)
         {
             await WriteUnauthorizedAsync(context);
             return;
@@ -115,15 +117,12 @@ public static class EzODataEndpoints
 
     private static async Task HandleAsync(HttpContext context)
     {
-        // Data plane requires authentication (spec 08 §2): anonymous → 401 + challenge.
-        if (context.User.Identity?.IsAuthenticated != true)
+        // Resolve identity first — a bypass identity (dev no-auth) is non-Anonymous
+        // even without a real credential, so it passes through.
+        var identity = ResolveIdentity(context);
+        if (identity == RequestIdentity.Anonymous)
         {
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            context.Response.Headers.WWWAuthenticate = "Bearer";
-            await context.Response.WriteAsJsonAsync(new
-            {
-                error = new { code = "Unauthorized", message = "Authenticate with a JWT bearer token or X-API-Key." },
-            });
+            await WriteUnauthorizedAsync(context);
             return;
         }
 
@@ -151,7 +150,7 @@ public static class EzODataEndpoints
             ServiceRoot = serviceRoot,
             Headers = headers,
             Body = context.Request.Body,
-            Identity = ResolveIdentity(context),
+            Identity = identity, // already resolved; reuse so bypass identity carries through
         };
 
         var response = await handler.HandleAsync(service, engineRequest, context.RequestAborted);

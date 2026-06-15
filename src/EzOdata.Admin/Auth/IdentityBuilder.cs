@@ -52,6 +52,12 @@ public static class IdentityBuilder
             }
         }
 
+        // Dev-bypass scheme: return the singleton bypass identity immediately.
+        if (principal.HasClaim(DevBypassAuthenticationHandler.BypassClaim, "true"))
+        {
+            return RequestIdentity.DevBypass;
+        }
+
         var isAdmin = principal.HasClaim(JwtTokenService.AdminClaim, "true");
 
         return new RequestIdentity

@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using EzOdata.Connectors.Abstractions;
 using EzOdata.Embedded;
 using EzOdata.Core.Policy;
@@ -5,6 +6,8 @@ using EzOdata.Core.Time;
 using EzOdata.OData;
 using EzOdata.Rest;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace EzOdata.AspNetCore.Embedded;
 
@@ -19,6 +22,32 @@ public static class ServiceCollectionExtensions
         var builder = new EzOdataBuilder();
         configure(builder);
 
+        // --- Dev no-auth: fail fast outside Development --------------------------------
+        if (builder.DevNoAuth)
+        {
+            // Validation runs at configure time using IHostEnvironment registered in DI.
+            services.AddSingleton<IHostedService>(sp =>
+            {
+                var env = sp.GetRequiredService<IHostEnvironment>();
+                if (!env.IsDevelopment())
+                {
+                    throw new InvalidOperationException(
+                        "EzOData: AllowAnonymousInDevelopment() is set but " +
+                        $"ASPNETCORE_ENVIRONMENT is '{env.EnvironmentName}'. " +
+                        "This option is only permitted in the Development environment. " +
+                        "Remove it or set the environment to Development.");
+                }
+
+                var log = sp.GetRequiredService<ILogger<EzOdataBuilder>>();
+                log.LogWarning(
+                    "======================================================================\n" +
+                    "  EzOData dev no-auth is ACTIVE: all requests get full bypass access.\n" +
+                    "  This must never run in production.\n" +
+                    "======================================================================");
+                return new NoOpHostedService();
+            });
+        }
+
         services.AddSingleton<ISystemClock, SystemClock>();
         services.AddSingleton<IConnectorRegistry>(new ConnectorRegistry(builder.Connectors));
         services.AddSingleton<EdmModelFactory>();
@@ -28,18 +57,13 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IPolicySource>(policySource);
         services.AddSingleton(policySource);
 
-        var resolver = new InMemoryServiceRuntimeResolver(builder.Services, null!);
-        // resolver needs the connector registry; resolve lazily via factory instead.
         services.AddSingleton<InMemoryServiceRuntimeResolver>(sp =>
             new InMemoryServiceRuntimeResolver(builder.Services, sp.GetRequiredService<IConnectorRegistry>()));
         services.AddSingleton<IServiceRuntimeResolver>(sp => sp.GetRequiredService<InMemoryServiceRuntimeResolver>());
         services.AddHostedService<EmbeddedWarmUp>();
-        _ = resolver; // discarded; the DI-built instance is authoritative
 
         services.AddSingleton<ODataRowFilterParser>();
 
-        // Signing key for skiptokens: derive from a stable per-process secret (embedded mode
-        // has no JWT config); host apps can override by registering their own SkipTokenCodec.
         services.AddSingleton(sp =>
         {
             var seed = System.Text.Encoding.UTF8.GetBytes("ez-embedded-skiptoken-" + Environment.MachineName);
@@ -59,27 +83,79 @@ public static class ServiceCollectionExtensions
                 (service, schema, version, identity) => rowFilter.Bind(service, schema, version, identity));
         });
 
-        // Host identity bridge (spec 15 §3.1): ClaimsPrincipal → RequestIdentity via role names.
-        // Registered in DI (not static) so multiple hosts in one process stay isolated.
-        var roleResolver = builder.RoleResolver;
+        // --- Identity factory: claim mapping + dev bypass ------------------------------
+        // Capture the role-resolution strategy chosen in the builder.
+        var customResolver = builder.RoleResolver;
+        var roleClaimType = builder.RoleClaimType;
+        var roleClaimTransform = builder.RoleClaimTransform;
+        var devNoAuth = builder.DevNoAuth;
+
         services.AddSingleton<IEzIdentityFactory>(new DelegateIdentityFactory(context =>
         {
-            if (context.User.Identity?.IsAuthenticated != true || roleResolver is null)
+            // Dev no-auth: unauthenticated requests get full bypass.
+            if (devNoAuth && context.User.Identity?.IsAuthenticated != true)
+            {
+                // The env guard is enforced at startup via the hosted service above.
+                return RequestIdentity.DevBypass;
+            }
+
+            if (context.User.Identity?.IsAuthenticated != true)
             {
                 return RequestIdentity.Anonymous; // fail closed
             }
 
-            var roleNames = roleResolver(context.User);
+            // Resolve role names using whichever strategy was configured.
+            IReadOnlyList<string> roleNames;
+            if (customResolver is not null)
+            {
+                roleNames = customResolver(context.User);
+            }
+            else if (roleClaimType is not null)
+            {
+                roleNames = context.User.Claims
+                    .Where(c => c.Type == roleClaimType)
+                    .Select(c => roleClaimTransform is null ? c.Value : roleClaimTransform(c.Value))
+                    .Where(n => n is not null)
+                    .Select(n => n!)
+                    .ToList();
+            }
+            else
+            {
+                roleNames = [];
+            }
+
             var roleIds = policySource.ResolveRoleIds(roleNames);
-            var claims = context.User.Claims.ToDictionary(c => c.Type, c => c.Value, StringComparer.OrdinalIgnoreCase);
+
+            // Populate all claims so @identity.* row filters resolve.
+            var claims = context.User.Claims
+                .GroupBy(c => c.Type, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First().Value, StringComparer.OrdinalIgnoreCase);
+
+            // Map sub/NameIdentifier to a numeric userId if present.
+            long? userId = null;
+            var sub = context.User.FindFirst("sub")?.Value ?? context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (sub is not null && long.TryParse(sub, out var uid)) userId = uid;
+
+            // Always expose sub and email in the claims dict for row filters.
+            if (sub is not null) claims["sub"] = sub;
+            var email = context.User.FindFirst("email")?.Value ?? context.User.FindFirst(ClaimTypes.Email)?.Value;
+            if (email is not null) claims["email"] = email;
+
             return new RequestIdentity
             {
-                UserId = null,
+                UserId = userId,
+                Email = email,
                 RoleIds = roleIds,
                 Claims = claims,
             };
         }));
 
         return services;
+    }
+
+    private sealed class NoOpHostedService : IHostedService
+    {
+        public Task StartAsync(CancellationToken ct) => Task.CompletedTask;
+        public Task StopAsync(CancellationToken ct) => Task.CompletedTask;
     }
 }

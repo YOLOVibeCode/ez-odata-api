@@ -18,7 +18,8 @@ public static class SnapshotTrimmer
         PolicyEngine engine,
         RowFilterParser rowFilterParser)
     {
-        if (roleRules.Any(r => r.BypassDataRules))
+        // Bypass identity (dev no-auth) and bypass-data-rules roles see the full schema.
+        if (identity.Bypass || roleRules.Any(r => r.BypassDataRules))
         {
             return snapshot;
         }

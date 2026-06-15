@@ -54,5 +54,14 @@ public sealed record RequestIdentity
     public IReadOnlyDictionary<string, string> Claims { get; init; } =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Full-access bypass: PolicyEngine and SnapshotTrimmer short-circuit immediately.
+    /// Only ever set in development (gated by AllowAnonymousInDevelopment /
+    /// Auth:DevNoAuth + ASPNETCORE_ENVIRONMENT=Development).
+    /// </summary>
+    public bool Bypass { get; init; }
+
     public static readonly RequestIdentity Anonymous = new();
+
+    public static readonly RequestIdentity DevBypass = new() { Bypass = true, IsAdmin = true };
 }

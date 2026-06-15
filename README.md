@@ -148,6 +148,55 @@ app.MapEzOData("/api/odata");
 The engine targets `netstandard2.0`, so the same packages run on **.NET Framework 4.8**
 (classic ASP.NET Web API 2 via `EzOdata.WebApi`) as well as modern .NET.
 
+**Host-auth pass-through helpers**
+
+The three `ResolveRolesBy` variants let you skip writing a manual lambda:
+
+```csharp
+// Your ASP.NET roles map directly to ez roles of the same name:
+ez.UseHostRoles();
+
+// Roles come from a custom claim (e.g. a JWT scope claim):
+ez.MapRolesFromClaim("scope", raw => raw.Replace("data:", ""));
+
+// Full escape hatch — any ClaimsPrincipal -> role name logic:
+ez.ResolveRolesBy(user => user.HasClaim("dept","ops") ? ["ops"] : []);
+```
+
+`sub`/`email` and all other claims are automatically forwarded so `@identity.*`
+row-filter expressions work without extra configuration.
+
+**No-auth dev mode**
+
+For local development without standing up a full identity provider, add one flag.
+**This is hard-blocked in any environment other than Development — the server refuses
+to start if the flag is set in staging or production.**
+
+*Standalone server* — set in `appsettings.Development.json` (or as an env var):
+
+```json
+{ "Auth": { "DevNoAuth": true } }
+```
+
+```bash
+# Railway dev environment variables:
+ASPNETCORE_ENVIRONMENT=Development
+Auth__DevNoAuth=true
+```
+
+*Embedded adapter*:
+
+```csharp
+builder.Services.AddEzOData(ez =>
+{
+    ez.AddService("sales", s => s.UsePostgreSql(connection));
+    ez.AllowAnonymousInDevelopment();   // no-op outside Development, throws in Production
+});
+```
+
+In dev no-auth mode every request carries a full-access bypass identity — trimming is
+disabled and the policy engine is short-circuited. A warning banner is logged on startup.
+
 The embeddable packages (`EzOdata.AspNetCore`, `EzOdata.WebApi`, `EzOdata.Core`, the
 connectors, etc.) are published to **GitHub Packages** by CI. To consume them, add the
 source:
