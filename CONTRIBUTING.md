@@ -38,6 +38,48 @@ PostgreSQL / MySQL / SQL Server instances via Testcontainers.
 3. Describe the "why" in the PR; reference the relevant `spec/` section if it changes
    documented behavior.
 
+## Making a release
+
+Both the NuGet packages and the npm package (`@noctusoft/ezodata-express`) are
+published from a single `v*` tag. The tag version drives both publishes
+automatically — you do **not** need to manually bump `Directory.Build.props`
+or `js/package.json` before tagging (the CI workflow injects the version at
+pack/publish time via the tag name).
+
+### Steps
+
+1. **Optionally pre-sync the version in source** (cosmetic, not required for
+   the publish to work):
+   - `Directory.Build.props` → `<Version>X.Y.Z</Version>`
+   - `js/package.json` → `"version": "X.Y.Z"`
+
+2. **Create and push the tag:**
+
+   ```bash
+   git tag v1.2.3
+   git push origin v1.2.3
+   ```
+
+3. **CI takes over.** The `v1.2.3` tag triggers:
+   - `dotnet-check` — full .NET build + unit, integration, and conformance tests
+   - `js-check` — typecheck, lint, dependency-cruise, and Vitest tests
+   - `publish-nuget` (after `dotnet-check` passes) — packs with `-p:Version=1.2.3`
+     and pushes to GitHub Packages (idempotent via `--skip-duplicate`)
+   - `publish-npm` (after `js-check` passes) — sets `package.json` version to
+     `1.2.3`, builds, and publishes to npm using `secrets.NPM_TOKEN`
+
+### JS-only patch releases
+
+If you need to ship a JS fix without touching the .NET packages, use a
+`js-v*` tag instead:
+
+```bash
+git tag js-v1.2.4
+git push origin js-v1.2.4
+```
+
+Only `js-check` and `publish-npm` will run; the .NET jobs are skipped.
+
 ## License
 
 By contributing, you agree that your contributions are licensed under the
