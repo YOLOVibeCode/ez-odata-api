@@ -248,6 +248,14 @@ dotnet test                    # unit + integration (Testcontainers) + OData con
 cd ui && npx playwright test   # admin console smoke (requires a running host)
 ```
 
+## Documentation
+
+| Doc | What it covers |
+|---|---|
+| [Why OData for data grids](docs/why-odata-for-grids.md) | Concrete `$filter`/`$select`/`$orderby`/`$count`/`$expand` examples; comparison with hand-rolled endpoints; Excel/Power BI connection |
+| [spec/](spec/) | Full product & engineering specification (16 docs) |
+| [Embedded adapter README](src/EzOdata.AspNetCore/Embedded/README.md) | Bolt-on NuGet usage, host-auth helpers, dev no-auth |
+
 ## License
 
-Apache-2.0.
+Apache-2.0 — Copyright 2026 Noctusoft, Inc.
