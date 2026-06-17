@@ -13,7 +13,7 @@
     <EzEngineTfm>netstandard2.0</EzEngineTfm>
     <EzPlatformTfm>net10.0</EzPlatformTfm>
     <!-- NuGet metadata for the embeddable packages (spec 15 §2) -->
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <Authors>Noctusoft, Inc.</Authors>
     <Company>Noctusoft, Inc.</Company>
     <Copyright>Copyright © 2026 Noctusoft, Inc.</Copyright>

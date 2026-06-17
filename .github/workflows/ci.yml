@@ -56,6 +56,12 @@ jobs:
       - name: Install dependencies
         working-directory: js
         run: pnpm install --frozen-lockfile
+      - name: Verify native bindings built
+        working-directory: js
+        # pnpm v10 skips dependency build scripts unless allowlisted in
+        # pnpm.onlyBuiltDependencies. Fail fast and clearly here if better-sqlite3's
+        # native addon wasn't built, instead of cryptically deep in the test suite.
+        run: node -e "new (require('better-sqlite3'))(':memory:').close(); console.log('better-sqlite3 native binding OK')"
       - name: Run checks (typecheck + lint + depcruise + tests)
         working-directory: js
         run: pnpm check
