@@ -140,7 +140,11 @@ jobs:
         run: pnpm build
       - name: Publish to npm
         working-directory: js
-        # --access public: required for the first publish of a scoped (@noctusoft/…) package.
-        run: pnpm publish --no-git-checks --access public
+        # pnpm does not read the NPM_CONFIG_USERCONFIG .npmrc that actions/setup-node
+        # generates, so write the auth token to a project-local .npmrc pnpm will read.
+        # --access public is required for the first publish of the scoped @noctusoft/… package.
+        run: |
+          printf '//registry.npmjs.org/:_authToken=%s\n' "$NODE_AUTH_TOKEN" > .npmrc
+          pnpm publish --no-git-checks --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
