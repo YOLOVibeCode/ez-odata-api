@@ -132,12 +132,15 @@ jobs:
           echo "VERSION=${VERSION}" >> "$GITHUB_OUTPUT"
       - name: Set package version
         working-directory: js
-        run: npm version ${{ steps.version.outputs.VERSION }} --no-git-tag-version
+        # --allow-same-version: package.json may already be at this version
+        # (we keep it in sync with the release), and plain `npm version` errors on a no-op.
+        run: npm version ${{ steps.version.outputs.VERSION }} --no-git-tag-version --allow-same-version
       - name: Build
         working-directory: js
         run: pnpm build
       - name: Publish to npm
         working-directory: js
-        run: pnpm publish --no-git-checks
+        # --access public: required for the first publish of a scoped (@noctusoft/…) package.
+        run: pnpm publish --no-git-checks --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
