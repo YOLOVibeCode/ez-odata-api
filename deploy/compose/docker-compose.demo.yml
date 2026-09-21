@@ -1,0 +1,77 @@
+# Demo overlay on the MINIMAL profile (SQLite system DB = the EF-migration path that
+# is actually tested; the Postgres system-DB path uses EnsureCreated and currently
+# fails on a SQLite-style filtered index).
+#
+# Adds BOTH sample engines as connectable services — that is the demo's point:
+# two unlike backends, one identical API contract.
+#
+#   docker compose -f docker-compose.minimal.yml -f docker-compose.demo.yml up -d --build
+#   ./demo.sh
+services:
+  ez-odata-api:
+    # image runs as non-root ($APP_UID) but the named /data volume is root-owned,
+    # so SQLite cannot create its file. Demo-only workaround.
+    user: "root"
+    environment:
+      # base compose ships a 31-byte master key; the host requires exactly 32
+      Encryption__MasterKey: "Y29tcG9zZS1kZXYtbWFzdGVyLWtleS0zMmJ5dGVzISE="
+      Mcp__Enabled: "true"
+      # Preflight is anonymous (no X-API-Key), so Swagger UI's origin has to be on the
+      # instance default list for "Try it out" to work (spec 08 §7).
+      Cors__DefaultAllowedOrigins__0: "http://localhost:8081"
+    depends_on:
+      sampledb:
+        condition: service_healthy
+      sampledb-mysql:
+        condition: service_healthy
+
+  sampledb:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: northwind
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD: demo-pw
+    ports:
+      - "55432:5432"
+    volumes:
+      - ../../tests/EzOdata.ConformanceTests/Fixtures/northwind.sql:/docker-entrypoint-initdb.d/01-northwind.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U demo -d northwind"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  sampledb-mysql:
+    image: mariadb:11  # MySQL 8.4 defaults to caching_sha2_password, which the
+                       # connector cannot negotiate without AllowPublicKeyRetrieval
+    environment:
+      MYSQL_DATABASE: northwind
+      MYSQL_USER: demo
+      MYSQL_PASSWORD: demo-pw
+      MARIADB_ROOT_PASSWORD: root-pw
+      MYSQL_ROOT_PASSWORD: root-pw
+    ports:
+      - "53306:3306"
+    volumes:
+      - ../../js/test/conformance/fixtures/northwind-mysql.sql:/docker-entrypoint-initdb.d/01-northwind.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -uroot -proot-pw || mysqladmin ping -h 127.0.0.1 -uroot -proot-pw"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Spec browser for the demo. The API requires auth on openapi.json, so Swagger UI
+  # cannot fetch it directly; ./demo.sh exports the four specs into ./specs and
+  # nginx serves them from there. Browsing works; "Try it out" needs CORS on the API.
+  swagger-ui:
+    image: swaggerapi/swagger-ui
+    ports:
+      - "8081:8080"
+    environment:
+      URLS: |
+        [{"url":"/specs/odata-sales-pg.json","name":"OData - sales-pg (PostgreSQL)"},
+         {"url":"/specs/odata-sales-my.json","name":"OData - sales-my (MySQL)"},
+         {"url":"/specs/rest-sales-pg.json","name":"REST - sales-pg (PostgreSQL)"},
+         {"url":"/specs/rest-sales-my.json","name":"REST - sales-my (MySQL)"}]
+    volumes:
+      - ./specs:/usr/share/nginx/html/specs:ro
