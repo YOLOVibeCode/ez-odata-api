@@ -170,6 +170,7 @@ public sealed class AuthService
         Convert.ToBase64String(RandomNumberGenerator.GetBytes(48))
             .Replace('+', '-').Replace('/', '_').TrimEnd('=');
 
-    internal static string Sha256(string value) =>
+    /// <summary>Key/token hash format, shared with CORS origin resolution in the host.</summary>
+    public static string Sha256(string value) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
 }

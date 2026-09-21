@@ -31,6 +31,8 @@ var masterKey = HostConfig.LoadMasterKey(builder.Configuration);
 
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionPath));
 builder.Services.Configure<LockoutOptions>(builder.Configuration.GetSection(LockoutOptions.SectionPath));
+builder.Services.Configure<EzOdata.Host.Middleware.CorsOptions>(
+    builder.Configuration.GetSection(EzOdata.Host.Middleware.CorsOptions.SectionPath));
 
 // ---- System database (SQLite default; PostgreSQL planned for prod) ----
 var systemDbProvider = builder.Configuration["SystemDatabase:Provider"] ?? "sqlite";
@@ -240,6 +242,7 @@ await HostConfig.ValidateMasterKeyProbeAsync(app.Services, CancellationToken.Non
 // ---- Pipeline (spec 02 §4 order) ----
 app.UseMiddleware<ExceptionShieldMiddleware>();
 app.UseMiddleware<RequestIdMiddleware>();
+app.UseMiddleware<DynamicCorsMiddleware>();   // spec 02 §4 step 4 — before authn; preflight is anonymous
 app.UseMiddleware<SetupModeMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
