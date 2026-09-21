@@ -14,3 +14,5 @@ ui/test-results/
 ui/playwright-report/
 src/EzOdata.Host/wwwroot/
 .DS_Store
+deploy/compose/specs/*
+!deploy/compose/specs/.gitkeep
