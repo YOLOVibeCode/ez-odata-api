@@ -51,8 +51,12 @@ public static class EzODataEndpoints
             if (identity == RequestIdentity.Anonymous) { await WriteUnauthorizedAsync(context); return; }
             var handler = context.RequestServices.GetRequiredService<OData.ODataRequestHandler>();
             var service = (string)context.Request.RouteValues["service"]!;
+            // The document's server URL must include the REST prefix and service, or "Try it out" in
+            // Swagger UI (and any generated client) calls {host}/_table/... instead of {host}{prefix}/{service}/_table/...
+            var serviceRoot = new Uri(
+                $"{context.Request.Scheme}://{context.Request.Host}{context.Request.PathBase}{trimmed}/{Uri.EscapeDataString(service)}/");
             var response = await handler.HandleOpenApiAsync(
-                service, BuildRequest(context, "openapi.json"), Docs.ApiDialect.Rest, context.RequestAborted);
+                service, BuildRequest(context, "openapi.json", serviceRoot), Docs.ApiDialect.Rest, context.RequestAborted);
             await WriteResponseAsync(context, response);
         });
         return endpoints.Map(trimmed + "/{service}/{**restPath}", HandleRestAsync);
@@ -76,11 +80,11 @@ public static class EzODataEndpoints
         await WriteResponseAsync(context, response);
     }
 
-    private static EngineRequest BuildRequest(HttpContext context, string path)
+    private static EngineRequest BuildRequest(HttpContext context, string path, Uri? serviceRoot = null)
     {
         var headers = context.Request.Headers.ToDictionary(
             h => h.Key, h => h.Value.ToString(), StringComparer.OrdinalIgnoreCase);
-        var serviceRoot = new Uri($"{context.Request.Scheme}://{context.Request.Host}/");
+        serviceRoot ??= new Uri($"{context.Request.Scheme}://{context.Request.Host}/");
 
         return new EngineRequest
         {
