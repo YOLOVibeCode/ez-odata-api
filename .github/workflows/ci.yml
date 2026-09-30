@@ -163,4 +163,9 @@ jobs:
         # match this repo. The package has no workspace: dependencies, so npm publishes pnpm's build.
         run: |
           npm install -g npm@latest
-          npm publish --access public
+          echo "node $(node --version), npm $(npm --version)"
+          npm publish --access public --loglevel verbose
+        env:
+          # setup-node injects a placeholder token; clear it so a failed OIDC exchange
+          # surfaces as an auth error instead of silently falling back to a bogus token.
+          NODE_AUTH_TOKEN: ""
