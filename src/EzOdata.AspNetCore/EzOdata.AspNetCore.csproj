@@ -7,7 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="SwaggerUI/ez-odata-swagger.css" LogicalName="EzOdata.AspNetCore.ez-odata-swagger.css" />
+  </ItemGroup>
+
+  <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <!-- UseEzODataSwaggerUI(): Swagger UI assets are embedded in this package (works offline) -->
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.2.3" />
     <ProjectReference Include="..\EzOdata.Core\EzOdata.Core.csproj" />
     <ProjectReference Include="..\EzOdata.OData\EzOdata.OData.csproj" />
     <ProjectReference Include="..\EzOdata.Rest\EzOdata.Rest.csproj" />

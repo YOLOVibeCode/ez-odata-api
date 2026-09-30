@@ -24,6 +24,9 @@ public sealed class InMemoryServiceRuntimeResolver : IServiceRuntimeResolver
         _connectors = connectors;
     }
 
+    /// <summary>Names of the services declared with <c>AddService</c>, in declaration order.</summary>
+    public IReadOnlyList<string> ServiceNames => _definitions.Select(d => d.Name).ToList();
+
     public Task<ServiceRuntime?> ResolveAsync(string serviceName, CancellationToken ct) =>
         Task.FromResult(_runtimes.TryGetValue(serviceName, out var runtime) ? runtime : null);
 

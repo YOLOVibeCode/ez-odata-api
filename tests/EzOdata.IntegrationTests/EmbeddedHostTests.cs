@@ -72,6 +72,7 @@ public class EmbeddedHostTests : IAsyncLifetime
                         e.MapEzOData("/api/odata");
                         e.MapEzODataRest("/api/rest");
                     });
+                    app.UseEzODataSwaggerUI();
                 });
             })
             .StartAsync();
@@ -125,6 +126,23 @@ public class EmbeddedHostTests : IAsyncLifetime
             var response = await _client.GetAsync(new Uri(server.TrimEnd('/') + path).PathAndQuery);
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         }
+    }
+
+    [Fact]
+    public async Task Swagger_ui_lists_every_service_on_every_mapped_api()
+    {
+        var page = await _client.GetAsync("/swagger/index.html");
+        Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+        Assert.Contains("ez-odata-swagger.css", await page.Content.ReadAsStringAsync());
+
+        // Discovered from AddService + MapEzOData/MapEzODataRest, no configuration needed
+        var config = await _client.GetStringAsync("/swagger/index.js");
+        Assert.Contains("/api/odata/inventory/openapi.json", config);
+        Assert.Contains("/api/rest/inventory/openapi.json", config);
+
+        var css = await _client.GetAsync("/swagger/ez-odata-swagger.css");
+        Assert.Equal(HttpStatusCode.OK, css.StatusCode);
+        Assert.Equal("text/css", css.Content.Headers.ContentType?.MediaType);
     }
 
     /// <summary>Test auth handler that grants the 'reader' role to every request.</summary>
