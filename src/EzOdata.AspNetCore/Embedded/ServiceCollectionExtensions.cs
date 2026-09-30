@@ -49,6 +49,7 @@ public static class ServiceCollectionExtensions
         }
 
         services.AddSingleton<ISystemClock, SystemClock>();
+        services.AddSingleton<EzODataEndpointCatalog>();
         services.AddSingleton<IConnectorRegistry>(new ConnectorRegistry(builder.Connectors));
         services.AddSingleton<EdmModelFactory>();
         services.AddSingleton<PolicyEngine>();

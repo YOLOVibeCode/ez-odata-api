@@ -1,0 +1,66 @@
+/* ez-odata styling for Swagger UI: palette from the ez-odata admin console. */
+:root {
+  --ez-bg: #0f1115;
+  --ez-surface: #1a1d24;
+  --ez-accent: #4c8dff;
+  --ez-accent-strong: #2f6fe0;
+  --ez-text: #1a1d24;
+  --ez-muted: #5a6270;
+}
+
+body { background: #f5f6f8; }
+.swagger-ui { color: var(--ez-text); }
+.swagger-ui .wrapper { max-width: 1320px; }
+
+/* Top bar: ez-odata wordmark instead of the Swagger logo */
+.swagger-ui .topbar { background: var(--ez-bg); padding: 12px 0; border-bottom: 3px solid var(--ez-accent); }
+.swagger-ui .topbar .link { display: flex; align-items: center; }
+.swagger-ui .topbar .link img, .swagger-ui .topbar .link svg { display: none; }
+.swagger-ui .topbar .link::before {
+  content: "ez-odata"; color: #fff; font: 700 22px/1 system-ui, -apple-system, "Segoe UI", sans-serif; letter-spacing: -0.02em;
+}
+.swagger-ui .topbar .link::after {
+  content: "API explorer"; color: var(--ez-accent); font: 500 14px/1 system-ui, -apple-system, "Segoe UI", sans-serif; margin-left: 10px;
+}
+.swagger-ui .topbar .download-url-wrapper .select-label { color: #c9ced6; }
+.swagger-ui .topbar .download-url-wrapper .select-label span { font-weight: 500; }
+.swagger-ui .topbar .download-url-wrapper .select-label select,
+.swagger-ui .topbar .download-url-wrapper select {
+  border: 1px solid #3a4150 !important; border-radius: 8px; background-color: var(--ez-surface); color: #e6e8ec;
+  font-weight: 600; min-width: 260px; box-shadow: none;
+}
+.swagger-ui .topbar .download-url-wrapper .select-label select:focus { border-color: var(--ez-accent) !important; outline: none; }
+
+/* Header */
+.swagger-ui .info { margin: 32px 0 16px; }
+.swagger-ui .info .title { font-weight: 700; letter-spacing: -0.02em; color: var(--ez-text); }
+.swagger-ui .info .title small { background: var(--ez-muted); }
+.swagger-ui .info .title small.version-stamp { background: var(--ez-accent); }
+.swagger-ui .info .description p, .swagger-ui .info .description td { font-size: 14px; color: #394150; }
+.swagger-ui .info .description table { border-collapse: collapse; margin: 8px 0 12px; width: auto; }
+@media (min-width: 720px) { .swagger-ui .info .description table { min-width: 520px; } }
+@media (max-width: 719px) {
+  .swagger-ui .info .description table { display: block; max-width: 100%; overflow-x: auto; }
+  .swagger-ui .topbar .download-url-wrapper .select-label select { min-width: 0; width: 100%; }
+}
+.swagger-ui .info .description th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ez-muted); }
+.swagger-ui .info .description th, .swagger-ui .info .description td { padding: 6px 12px; border-bottom: 1px solid #e3e6ea; text-align: left; }
+.swagger-ui .info .description code { background: #eef0f3; border-radius: 4px; padding: 1px 5px; color: #1f2937; }
+.swagger-ui .info a, .swagger-ui a.nostyle { color: var(--ez-accent-strong); }
+.swagger-ui .scheme-container { background: #fff; box-shadow: none; border-top: 1px solid #e3e6ea; border-bottom: 1px solid #e3e6ea; }
+
+/* Table groups */
+.swagger-ui .opblock-tag { border-bottom: 1px solid #e3e6ea; font-weight: 700; letter-spacing: -0.01em; }
+.swagger-ui .opblock-tag small { color: var(--ez-muted); font-weight: 400; }
+.swagger-ui .opblock { border-radius: 8px; box-shadow: none; }
+.swagger-ui .opblock .opblock-summary { border-radius: 8px; }
+.swagger-ui .opblock .opblock-summary-method { border-radius: 6px; min-width: 76px; }
+.swagger-ui .filter-container .operation-filter-input { border: 1px solid #d7dbe0; border-radius: 8px; padding: 10px 12px; }
+
+/* Actions */
+.swagger-ui .btn.execute { background: var(--ez-accent); border-color: var(--ez-accent); border-radius: 6px; }
+.swagger-ui .btn.execute:hover { background: var(--ez-accent-strong); }
+.swagger-ui .btn.authorize { color: var(--ez-accent-strong); border-color: var(--ez-accent); border-radius: 6px; }
+.swagger-ui .btn.authorize svg { fill: var(--ez-accent-strong); }
+.swagger-ui input[type=text], .swagger-ui textarea, .swagger-ui select { border-radius: 6px; }
+.swagger-ui .responses-inner h4, .swagger-ui .responses-inner h5 { color: var(--ez-text); }

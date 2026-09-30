@@ -37,6 +37,7 @@ public static class EzODataEndpoints
     public static IEndpointConventionBuilder MapEzOData(this IEndpointRouteBuilder endpoints, string prefix = "/api/odata")
     {
         var trimmed = "/" + prefix.Trim('/');
+        endpoints.ServiceProvider.GetService<EzODataEndpointCatalog>()?.Add(trimmed, EzODataApi.OData);
 
         return endpoints.Map(trimmed + "/{service}/{**odataPath}", HandleAsync);
     }
@@ -44,6 +45,7 @@ public static class EzODataEndpoints
     public static IEndpointConventionBuilder MapEzODataRest(this IEndpointRouteBuilder endpoints, string prefix = "/api/rest")
     {
         var trimmed = "/" + prefix.Trim('/');
+        endpoints.ServiceProvider.GetService<EzODataEndpointCatalog>()?.Add(trimmed, EzODataApi.Rest);
         // openapi.json served by the OData handler's docs generator (REST dialect)
         endpoints.Map(trimmed + "/{service}/openapi.json", async context =>
         {
