@@ -48,6 +48,43 @@ public class OpenApiDocsTests
     }
 
     [Fact]
+    public async Task Openapi_is_structured_for_swagger_ui()
+    {
+        var doc = await _fixture.Client.GetFromJsonAsync<JsonElement>(
+            $"/api/odata/{ConformanceFixture.ServiceName}/openapi.json");
+
+        // A header that explains how to query, and one group (tag) per table
+        Assert.Contains("$filter", doc.GetProperty("info").GetProperty("description").GetString());
+        var tags = doc.GetProperty("tags").EnumerateArray().ToDictionary(t => t.GetProperty("name").GetString()!, t => t.GetProperty("description").GetString()!);
+        Assert.Contains("columns", tags["customers"]);
+
+        var paths = doc.GetProperty("paths");
+        var list = paths.GetProperty("/customers").GetProperty("get");
+        Assert.Equal("customers", list.GetProperty("tags")[0].GetString());
+        Assert.Equal("customers_list", list.GetProperty("operationId").GetString());
+        Assert.Equal("Query customers", list.GetProperty("summary").GetString());
+        Assert.Equal("Create a row in customers", paths.GetProperty("/customers").GetProperty("post").GetProperty("summary").GetString());
+
+        // By-key paths declare their path parameter, so "Try it out" has an input for it
+        var key = paths.GetProperty("/customers({id})").GetProperty("parameters")[0];
+        Assert.Equal("id", key.GetProperty("name").GetString());
+        Assert.Equal("path", key.GetProperty("in").GetString());
+        Assert.True(key.GetProperty("required").GetBoolean());
+    }
+
+    [Fact]
+    public async Task Rest_openapi_documents_the_resource_envelope()
+    {
+        var doc = await _fixture.Client.GetFromJsonAsync<JsonElement>(
+            $"/api/rest/{ConformanceFixture.ServiceName}/openapi.json");
+
+        var ok = doc.GetProperty("paths").GetProperty("/_table/customers").GetProperty("get")
+            .GetProperty("responses").GetProperty("200").GetProperty("content").GetProperty("application/json").GetProperty("schema");
+        Assert.True(ok.GetProperty("properties").TryGetProperty("resource", out _));
+        Assert.Equal("id", doc.GetProperty("paths").GetProperty("/_table/customers/{id}").GetProperty("parameters")[0].GetProperty("name").GetString());
+    }
+
+    [Fact]
     public async Task Openapi_is_etag_cached()
     {
         var first = await _fixture.Client.GetAsync($"/api/odata/{ConformanceFixture.ServiceName}/openapi.json");

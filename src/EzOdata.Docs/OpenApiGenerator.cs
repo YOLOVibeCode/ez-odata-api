@@ -15,7 +15,7 @@ public enum ApiDialect { ODataV4, Rest }
 /// </summary>
 public sealed class OpenApiGenerator
 {
-    public const string GeneratorVersion = "1.0";
+    public const string GeneratorVersion = "1.1";
 
     public string Generate(
         SchemaSnapshot schema, ApiDialect dialect, string serviceName, string serviceLabel,
@@ -27,6 +27,7 @@ public sealed class OpenApiGenerator
             ["info"] = new JsonObject
             {
                 ["title"] = $"{serviceLabel} ({(dialect == ApiDialect.ODataV4 ? "OData v4" : "REST")})",
+                ["description"] = Describe(schema, dialect, serviceRoot),
                 ["version"] = "1.0",
                 ["x-ez-schema-version"] = schemaVersion,
                 ["x-ez-generator-version"] = GeneratorVersion,
@@ -49,6 +50,7 @@ public sealed class OpenApiGenerator
                 new JsonObject { ["apiKey"] = new JsonArray() },
                 new JsonObject { ["bearer"] = new JsonArray() },
             },
+            ["tags"] = BuildTags(schema),
             ["paths"] = dialect == ApiDialect.ODataV4 ? BuildODataPaths(schema) : BuildRestPaths(schema),
         };
 
@@ -150,23 +152,20 @@ public sealed class OpenApiGenerator
         foreach (var table in schema.Tables)
         {
             var set = table.ExposedName;
-            var collection = new JsonObject
-            {
-                ["get"] = ODataListOperation(table),
-            };
-            if (table.Writable)
-            {
-                collection["post"] = ODataCreateOperation(table);
-            }
-
+            var collection = new JsonObject { ["get"] = ODataListOperation(schema, table) };
+            if (table.Writable) collection["post"] = CreateOperation(table);
             paths[$"/{set}"] = collection;
 
             if (table.HasKey)
             {
-                var byKey = new JsonObject { ["get"] = ODataGetOperation(table) };
+                var byKey = new JsonObject
+                {
+                    ["parameters"] = KeyParameters(table, ApiDialect.ODataV4),
+                    ["get"] = GetOperation(table),
+                };
                 if (table.Writable)
                 {
-                    byKey["patch"] = ODataUpdateOperation(table);
+                    byKey["patch"] = UpdateOperation(table);
                     byKey["delete"] = DeleteOperation(table);
                 }
 
@@ -184,15 +183,19 @@ public sealed class OpenApiGenerator
         {
             var set = table.ExposedName;
             var collection = new JsonObject { ["get"] = RestListOperation(table) };
-            if (table.Writable) collection["post"] = ODataCreateOperation(table);
+            if (table.Writable) collection["post"] = CreateOperation(table);
             paths[$"/_table/{set}"] = collection;
 
             if (table.HasKey)
             {
-                var byKey = new JsonObject { ["get"] = ODataGetOperation(table) };
+                var byKey = new JsonObject
+                {
+                    ["parameters"] = KeyParameters(table, ApiDialect.Rest),
+                    ["get"] = GetOperation(table),
+                };
                 if (table.Writable)
                 {
-                    byKey["patch"] = ODataUpdateOperation(table);
+                    byKey["patch"] = UpdateOperation(table);
                     byKey["delete"] = DeleteOperation(table);
                 }
 
@@ -203,79 +206,243 @@ public sealed class OpenApiGenerator
         return paths;
     }
 
-    private static JsonObject ODataListOperation(TableModel table) => new()
-    {
-        ["summary"] = $"Query {table.ExposedName}",
-        ["parameters"] = new JsonArray
-        {
-            QueryParam("$filter", "OData filter expression"),
-            QueryParam("$select", "Comma-separated properties"),
-            QueryParam("$orderby", "Sort expression"),
-            QueryParam("$top", "Max rows", "integer"),
-            QueryParam("$skip", "Rows to skip", "integer"),
-            QueryParam("$count", "Include total count", "boolean"),
-            QueryParam("$expand", "Related entities to include"),
-        },
-        ["responses"] = OkArrayResponse(table),
-    };
+    // ---- document-level description and per-table tags (what Swagger UI renders as the header and groups) ----
 
-    private static JsonObject RestListOperation(TableModel table) => new()
+    private static string Describe(SchemaSnapshot schema, ApiDialect dialect, Uri serviceRoot)
     {
-        ["summary"] = $"Query {table.ExposedName}",
-        ["parameters"] = new JsonArray
-        {
-            QueryParam("filter", "SQL-ish filter expression"),
-            QueryParam("fields", "Comma-separated fields"),
-            QueryParam("order", "Sort expression"),
-            QueryParam("limit", "Max rows", "integer"),
-            QueryParam("offset", "Rows to skip", "integer"),
-            QueryParam("include_count", "Include total count", "boolean"),
-        },
-        ["responses"] = OkArrayResponse(table),
-    };
+        var tables = schema.Tables.Count(t => !t.IsView);
+        var views = schema.Tables.Count(t => t.IsView);
+        var sample = schema.Tables.FirstOrDefault(t => !t.IsView) ?? schema.Tables.FirstOrDefault();
+        var shape = views > 0 ? $"{tables} tables and {views} views" : $"{tables} tables";
+        var text = new StringBuilder();
+        text.Append("Generated from the live database schema: ").Append(shape)
+            .Append(", each with the operations your role allows.\n\n");
 
-    private static JsonObject ODataGetOperation(TableModel table) => new()
+        if (dialect == ApiDialect.ODataV4)
+        {
+            text.Append("**Query options** (on any collection):\n\n")
+                .Append("| Option | Example |\n|---|---|\n")
+                .Append("| `$filter` | `").Append(sample is null ? "id eq 1" : FilterExample(sample, rest: false)).Append("` |\n")
+                .Append("| `$select` | `").Append(sample is null ? "id" : SelectExample(sample)).Append("` |\n")
+                .Append("| `$orderby` | `").Append(sample is null ? "id desc" : OrderExample(sample, rest: false)).Append("` |\n")
+                .Append("| `$top` / `$skip` | `$top=20&$skip=40` |\n")
+                .Append("| `$count` | `true` (adds `@odata.count`) |\n")
+                .Append("| `$expand` | a related table, listed on each operation |\n\n")
+                .Append("Service document: `").Append(serviceRoot.ToString().TrimEnd('/')).Append("/`. ")
+                .Append("Schema (CSDL): `").Append(serviceRoot.ToString().TrimEnd('/')).Append("/$metadata`.");
+        }
+        else
+        {
+            text.Append("**Query parameters** (on any `/_table/{name}`):\n\n")
+                .Append("| Parameter | Example |\n|---|---|\n")
+                .Append("| `filter` | `").Append(sample is null ? "id = 1" : FilterExample(sample, rest: true)).Append("` |\n")
+                .Append("| `fields` | `").Append(sample is null ? "id" : SelectExample(sample)).Append("` |\n")
+                .Append("| `order` | `").Append(sample is null ? "id desc" : OrderExample(sample, rest: true)).Append("` |\n")
+                .Append("| `limit` / `offset` | `limit=20&offset=40` |\n")
+                .Append("| `include_count` | `true` (adds `meta.count`) |\n\n")
+                .Append("Rows are returned under `resource`, with paging in `meta.next`.");
+        }
+
+        return text.ToString();
+    }
+
+    private static JsonArray BuildTags(SchemaSnapshot schema)
     {
-        ["summary"] = $"Get a {table.ExposedName} by key",
-        ["responses"] = new JsonObject
+        var tags = new JsonArray();
+        foreach (var table in schema.Tables)
+        {
+            var facts = new List<string> { table.IsView ? "View" : "Table", $"{table.Columns.Count} columns" };
+            if (table.HasKey) facts.Add($"key: {string.Join(", ", table.PrimaryKey)}");
+            if (!table.Writable) facts.Add("read-only");
+            var navigations = Navigations(schema, table);
+            if (navigations.Count > 0) facts.Add($"related: {string.Join(", ", navigations)}");
+
+            var description = string.Join(" · ", facts);
+            if (!string.IsNullOrWhiteSpace(table.Comment)) description = $"{table.Comment} — {description}";
+            tags.Add(new JsonObject { ["name"] = table.ExposedName, ["description"] = description });
+        }
+
+        return tags;
+    }
+
+    // ---- operations ----
+
+    private static JsonObject ODataListOperation(SchemaSnapshot schema, TableModel table)
+    {
+        var navigations = Navigations(schema, table);
+        var parameters = new JsonArray
+        {
+            QueryParam("$filter", $"Filter rows, e.g. `{FilterExample(table, rest: false)}`"),
+            QueryParam("$select", $"Columns to return, e.g. `{SelectExample(table)}`"),
+            QueryParam("$orderby", $"Sort, e.g. `{OrderExample(table, rest: false)}`"),
+            QueryParam("$top", "Maximum rows to return", "integer"),
+            QueryParam("$skip", "Rows to skip (paging)", "integer"),
+            QueryParam("$count", "Include the total row count (`@odata.count`)", "boolean"),
+        };
+        if (navigations.Count > 0)
+        {
+            parameters.Add(QueryParam("$expand", $"Include related rows: {string.Join(", ", navigations.Select(n => $"`{n}`"))}"));
+        }
+
+        return Operation(table, "list", $"Query {table.ExposedName}",
+            parameters: parameters, responses: OkArrayResponse(table, "value"));
+    }
+
+    private static JsonObject RestListOperation(TableModel table) => Operation(table, "list", $"Query {table.ExposedName}",
+        parameters: new JsonArray
+        {
+            QueryParam("filter", $"Filter rows, e.g. `{FilterExample(table, rest: true)}`"),
+            QueryParam("fields", $"Columns to return, e.g. `{SelectExample(table)}`"),
+            QueryParam("order", $"Sort, e.g. `{OrderExample(table, rest: true)}`"),
+            QueryParam("limit", "Maximum rows to return", "integer"),
+            QueryParam("offset", "Rows to skip (paging)", "integer"),
+            QueryParam("include_count", "Include the total row count (`meta.count`)", "boolean"),
+        },
+        responses: OkArrayResponse(table, "resource"));
+
+    private static JsonObject GetOperation(TableModel table) => Operation(table, "get", $"Get a row from {table.ExposedName} by key",
+        responses: new JsonObject
         {
             ["200"] = JsonResponse($"#/components/schemas/{table.ExposedName}"),
             ["404"] = new JsonObject { ["description"] = "Not found" },
-        },
-    };
+        });
 
-    private static JsonObject ODataCreateOperation(TableModel table) => new()
-    {
-        ["summary"] = $"Create a {table.ExposedName}",
-        ["requestBody"] = RequestBody($"#/components/schemas/{table.ExposedName}Create"),
-        ["responses"] = new JsonObject
+    private static JsonObject CreateOperation(TableModel table) => Operation(table, "create", $"Create a row in {table.ExposedName}",
+        requestBody: RequestBody($"#/components/schemas/{table.ExposedName}Create"),
+        responses: new JsonObject
         {
-            ["201"] = JsonResponse($"#/components/schemas/{table.ExposedName}"),
+            ["201"] = JsonResponse($"#/components/schemas/{table.ExposedName}", "Created"),
             ["400"] = new JsonObject { ["description"] = "Validation error" },
-            ["409"] = new JsonObject { ["description"] = "Conflict" },
-        },
-    };
+            ["409"] = new JsonObject { ["description"] = "Conflict (for example a unique constraint)" },
+        });
 
-    private static JsonObject ODataUpdateOperation(TableModel table) => new()
-    {
-        ["summary"] = $"Update a {table.ExposedName}",
-        ["requestBody"] = RequestBody($"#/components/schemas/{table.ExposedName}Update"),
-        ["responses"] = new JsonObject
+    private static JsonObject UpdateOperation(TableModel table) => Operation(table, "update", $"Update a row in {table.ExposedName}",
+        description: "Only the properties you send are changed.",
+        requestBody: RequestBody($"#/components/schemas/{table.ExposedName}Update"),
+        responses: new JsonObject
         {
             ["200"] = JsonResponse($"#/components/schemas/{table.ExposedName}"),
+            ["400"] = new JsonObject { ["description"] = "Validation error" },
             ["404"] = new JsonObject { ["description"] = "Not found" },
-        },
-    };
+        });
 
-    private static JsonObject DeleteOperation(TableModel table) => new()
-    {
-        ["summary"] = $"Delete a {table.ExposedName}",
-        ["responses"] = new JsonObject
+    private static JsonObject DeleteOperation(TableModel table) => Operation(table, "delete", $"Delete a row from {table.ExposedName}",
+        responses: new JsonObject
         {
             ["204"] = new JsonObject { ["description"] = "Deleted" },
             ["404"] = new JsonObject { ["description"] = "Not found" },
-        },
+        });
+
+    private static JsonObject Operation(TableModel table, string verb, string summary, string? description = null,
+        JsonArray? parameters = null, JsonObject? requestBody = null, JsonObject? responses = null)
+    {
+        var operation = new JsonObject
+        {
+            ["tags"] = new JsonArray { table.ExposedName },
+            ["operationId"] = $"{OperationName(table.ExposedName)}_{verb}",
+            ["summary"] = summary,
+        };
+        if (description is not null) operation["description"] = description;
+        if (parameters is not null) operation["parameters"] = parameters;
+        if (requestBody is not null) operation["requestBody"] = requestBody;
+        operation["responses"] = responses ?? new JsonObject();
+        return operation;
+    }
+
+    /// <summary>Path parameters for by-key paths: <c>{id}</c> for single keys, one per column for composite keys.</summary>
+    private static JsonArray KeyParameters(TableModel table, ApiDialect dialect)
+    {
+        var parameters = new JsonArray();
+        if (table.PrimaryKey.Count == 1 || dialect == ApiDialect.Rest)
+        {
+            var column = table.FindColumn(table.PrimaryKey[0]);
+            parameters.Add(PathParam("id", $"Key ({string.Join(", ", table.PrimaryKey)})", column));
+        }
+        else
+        {
+            foreach (var key in table.PrimaryKey)
+            {
+                parameters.Add(PathParam(key, $"Key part {key}", table.FindColumn(key)));
+            }
+        }
+
+        return parameters;
+    }
+
+    private static JsonObject PathParam(string name, string description, ColumnModel? column) => new()
+    {
+        ["name"] = name,
+        ["in"] = "path",
+        ["required"] = true,
+        ["description"] = description,
+        ["schema"] = column is null ? new JsonObject { ["type"] = "string" } : KeySchema(column),
     };
+
+    private static JsonObject KeySchema(ColumnModel column)
+    {
+        var schema = PropertySchema(column);
+        schema.Remove("nullable");
+        schema.Remove("description");
+        return schema;
+    }
+
+    // ---- examples built from the table's real columns ----
+
+    private static List<string> Navigations(SchemaSnapshot schema, TableModel table)
+    {
+        var names = table.ForeignKeys.Select(fk => fk.NavToOne).ToList();
+        foreach (var other in schema.Tables)
+        {
+            names.AddRange(other.ForeignKeys.Where(fk => fk.RefTable == table.ExposedName).Select(fk => fk.NavToMany));
+        }
+
+        return names.Distinct(StringComparer.Ordinal).ToList();
+    }
+
+    private static ColumnModel? FirstColumn(TableModel table, Func<ColumnModel, bool> predicate) =>
+        table.Columns.FirstOrDefault(c => !c.IsPrimaryKey && predicate(c)) ?? table.Columns.FirstOrDefault(predicate);
+
+    private static bool IsText(ColumnModel c) => c.EdmType == "Edm.String" && c.AllowedValues is null;
+
+    private static bool IsNumber(ColumnModel c) => c.EdmType is "Edm.Int16" or "Edm.Int32" or "Edm.Int64" or "Edm.Decimal" or "Edm.Double" or "Edm.Single";
+
+    private static bool IsFlag(ColumnModel c) =>
+        c.EdmType == "Edm.Boolean"
+        || c.ExposedName.StartsWith("is_", StringComparison.OrdinalIgnoreCase)
+        || c.ExposedName.StartsWith("has_", StringComparison.OrdinalIgnoreCase)
+        || (c.ExposedName.Length > 2 && c.ExposedName.StartsWith("Is", StringComparison.Ordinal) && char.IsUpper(c.ExposedName[2]));
+
+    /// <summary>A realistic filter for this table: text contains, else a numeric comparison, else the key.</summary>
+    private static string FilterExample(TableModel table, bool rest)
+    {
+        if (FirstColumn(table, IsText) is { } text)
+        {
+            return rest ? $"{text.ExposedName} like '%a%'" : $"contains({text.ExposedName},'a')";
+        }
+
+        if (FirstColumn(table, c => IsNumber(c) && !c.IsPrimaryKey && !IsFlag(c)) is { } number)
+        {
+            return rest ? $"{number.ExposedName} > 10" : $"{number.ExposedName} gt 10";
+        }
+
+        var key = table.PrimaryKey.FirstOrDefault() ?? table.Columns.FirstOrDefault()?.ExposedName ?? "id";
+        return rest ? $"{key} = 1" : $"{key} eq 1";
+    }
+
+    private static string SelectExample(TableModel table) =>
+        string.Join(",", table.Columns.Take(Math.Min(3, table.Columns.Count)).Select(c => c.ExposedName));
+
+    private static string OrderExample(TableModel table, bool rest)
+    {
+        var column = FirstColumn(table, IsText) ?? table.Columns.FirstOrDefault();
+        return column is null ? "id desc" : $"{column.ExposedName} desc";
+    }
+
+    private static string OperationName(string name)
+    {
+        var chars = name.Select(ch => char.IsLetterOrDigit(ch) ? ch : '_').ToArray();
+        return new string(chars);
+    }
 
     private static string KeyTemplate(TableModel table) =>
         table.PrimaryKey.Count == 1 ? "{id}" : string.Join(",", table.PrimaryKey.Select(k => $"{k}={{{k}}}"));
@@ -289,7 +456,7 @@ public sealed class OpenApiGenerator
         ["schema"] = new JsonObject { ["type"] = type },
     };
 
-    private static JsonObject OkArrayResponse(TableModel table) => new()
+    private static JsonObject OkArrayResponse(TableModel table, string rowsProperty) => new()
     {
         ["200"] = new JsonObject
         {
@@ -303,7 +470,7 @@ public sealed class OpenApiGenerator
                         ["type"] = "object",
                         ["properties"] = new JsonObject
                         {
-                            ["value"] = new JsonObject
+                            [rowsProperty] = new JsonObject
                             {
                                 ["type"] = "array",
                                 ["items"] = Ref($"#/components/schemas/{table.ExposedName}"),
@@ -315,9 +482,9 @@ public sealed class OpenApiGenerator
         },
     };
 
-    private static JsonObject JsonResponse(string schemaRef) => new()
+    private static JsonObject JsonResponse(string schemaRef, string description = "Success") => new()
     {
-        ["description"] = "Success",
+        ["description"] = description,
         ["content"] = new JsonObject
         {
             ["application/json"] = new JsonObject { ["schema"] = Ref(schemaRef) },
