@@ -1,6 +1,6 @@
 {
   "name": "@noctusoft/ezodata-express",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Bolt a governed OData v4 + REST + MCP API onto any Express app. Pure TypeScript, full parity with the ez-odata .NET engine.",
   "repository": {
     "type": "git",

@@ -67,7 +67,11 @@ public class EmbeddedHostTests : IAsyncLifetime
                     app.UseRouting();
                     app.UseAuthentication();
                     app.UseAuthorization();
-                    app.UseEndpoints(e => e.MapEzOData("/api/odata"));
+                    app.UseEndpoints(e =>
+                    {
+                        e.MapEzOData("/api/odata");
+                        e.MapEzODataRest("/api/rest");
+                    });
                 });
             })
             .StartAsync();
@@ -105,6 +109,22 @@ public class EmbeddedHostTests : IAsyncLifetime
     {
         var response = await _client.GetAsync("/api/odata/inventory/widgets?$filter=secret eq 's1'");
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Embedded_openapi_server_urls_point_at_the_service()
+    {
+        // Swagger UI's "Try it out" calls servers[0].url + path, so both documents must root at the service.
+        foreach (var (spec, path) in new[] { ("/api/odata/inventory/openapi.json", "/widgets"), ("/api/rest/inventory/openapi.json", "/_table/widgets") })
+        {
+            var doc = await _client.GetFromJsonAsync<JsonElement>(spec);
+            var server = doc.GetProperty("servers")[0].GetProperty("url").GetString()!;
+            Assert.EndsWith(spec.Replace("/openapi.json", ""), server.TrimEnd('/'));
+            Assert.True(doc.GetProperty("paths").TryGetProperty(path, out _), $"{spec} has no {path}");
+
+            var response = await _client.GetAsync(new Uri(server.TrimEnd('/') + path).PathAndQuery);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        }
     }
 
     /// <summary>Test auth handler that grants the 'reader' role to every request.</summary>
