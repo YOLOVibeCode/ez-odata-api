@@ -1,7 +1,7 @@
 name: CI
 
 # Build + test on every push/PR.
-# On a v* tag: publish NuGet to GitHub Packages AND publish npm package.
+# On a v* tag: publish NuGet to nuget.org (trusted publishing) and GitHub Packages, AND publish npm package.
 # On a js-v* tag: publish npm package only (JS-only patch releases).
 on:
   push:
@@ -72,10 +72,14 @@ jobs:
           TESTCONTAINERS_RYUK_DISABLED: "false"
 
   publish-nuget:
-    name: Pack & publish NuGet to GitHub Packages
+    name: Pack & publish NuGet (nuget.org + GitHub Packages)
     needs: dotnet-check
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write # nuget.org trusted publishing (OIDC): no stored API key
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -97,6 +101,17 @@ jobs:
           dotnet nuget push "artifacts/nuget/*.nupkg" \
             --source github \
             --api-key "${{ secrets.GITHUB_TOKEN }}" \
+            --skip-duplicate
+      - name: Log in to nuget.org (trusted publishing)
+        id: nuget-login
+        uses: NuGet/login@v1
+        with:
+          user: rvegajr
+      - name: Push to nuget.org
+        run: |
+          dotnet nuget push "artifacts/nuget/*.nupkg" \
+            --source https://api.nuget.org/v3/index.json \
+            --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" \
             --skip-duplicate
       - uses: actions/upload-artifact@v4
         with:
