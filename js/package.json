@@ -2,6 +2,11 @@
   "name": "@noctusoft/ezodata-express",
   "version": "1.0.5",
   "description": "Bolt a governed OData v4 + REST + MCP API onto any Express app. Pure TypeScript, full parity with the ez-odata .NET engine.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YOLOVibeCode/ez-odata-api.git",
+    "directory": "js"
+  },
   "license": "Apache-2.0",
   "author": "Noctusoft, Inc.",
   "type": "module",
